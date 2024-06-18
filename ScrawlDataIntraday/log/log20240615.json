@@ -1,6 +1,7 @@
 {"Timestamp":"2024-06-15T00:00:00.5215279+07:00","Level":"Information","MessageTemplate":"Saved Mongo: DRC","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
 {"Timestamp":"2024-06-15T00:00:01.0697560+07:00","Level":"Information","MessageTemplate":"Saved Mongo: DRI","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
 {"Timestamp":"2024-06-15T00:00:01.6229835+07:00","Level":"Information","MessageTemplate":"Saved Mongo: DTD","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
+{"Timestamp":"2024-06-15T00:00:02.4362348+07:00","Level":"Information","MessageTemplate":"Saved Mongo: DXG","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
 {"Timestamp":"2024-06-15T00:00:53.1821848+07:00","Level":"Information","MessageTemplate":"DXP Total trades: 321","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
 {"Timestamp":"2024-06-15T00:01:14.7080147+07:00","Level":"Information","MessageTemplate":"DXS Total trades: 482","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
 {"Timestamp":"2024-06-15T00:02:31.7964709+07:00","Level":"Information","MessageTemplate":"EIB Total trades: 1094","Properties":{"SourceContext":"ScrawlDataIntraday.Worker","Application":"YourAppName"}}
