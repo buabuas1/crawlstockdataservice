@@ -1,3 +1,5 @@
 .vs/
 .idea/
-*.json
+*/bin/*
+*/obj/*
+*/log/*
