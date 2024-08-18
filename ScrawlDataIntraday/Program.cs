@@ -4,35 +4,84 @@ using Serilog;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using ScrawlDataIntraday.Service;
+using Quartz;
 
-var builder = Host.CreateApplicationBuilder(args);
-
-builder.Services.Configure<MongoDatabaseSettings>(
-    builder.Configuration.GetSection("StockStoreDatabase"));
-
-builder.Services.AddMassTransit(x =>
+namespace ScrawlDataIntraday
 {
-    x.AddConsumer<StockConsumer>();
-
-    x.UsingInMemory((context, cfg) =>
+    class Program
     {
-        cfg.ConfigureEndpoints(context);
-        cfg.ConcurrentMessageLimit = int.Parse(builder.Configuration.GetSection("ComsumerSize").Value ?? "1");
-    });
-});
+        static void Main(string[] args)
+        {
+            try
+            {
+                var builder = Host.CreateDefaultBuilder(args);
 
-builder.Services.AddSingleton<StockIntradayService>();
-builder.Services.AddSingleton<CrawlDataService>();
+                builder.ConfigureServices((hostContext, services) =>
+                {
+                    services.Configure<MongoDatabaseSettings>(
+                    hostContext.Configuration.GetSection("StockStoreDatabase"));
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .CreateLogger();
+                    services.AddMassTransit(x =>
+                    {
+                        x.AddConsumer<StockConsumer>();
 
-builder.Logging.ClearProviders();
-builder.Logging.AddSerilog();
+                        x.UsingInMemory((context, cfg) =>
+                        {
+                            cfg.ConfigureEndpoints(context);
+                            cfg.ConcurrentMessageLimit = int.Parse(hostContext.Configuration.GetSection("ComsumerSize").Value ?? "1");
+                        });
+                    });
 
-builder.Services.AddHostedService<Worker>();
+                    services.AddSingleton<StockIntradayService>();
+                    services.AddSingleton<CrawlDataService>();
+
+                    Log.Logger = new LoggerConfiguration()
+                    .ReadFrom.Configuration(hostContext.Configuration)
+                    .CreateLogger();
+
+                    string time = hostContext.Configuration.GetSection("CronTime").Value;
+                    Console.WriteLine("CronTime: " + time);
+                    services.AddQuartz(q =>
+                    {
+                        // Create a job
+                        var jobKey = new JobKey("DailyJob");
+                        q.AddJob<Worker>(opts => opts.WithIdentity(jobKey));
+
+                        // Create a trigger to fire at 15:00 every day
+                        q.AddTrigger(opts => opts
+                            .ForJob(jobKey) // Link to the DailyJob
+                            .WithIdentity("DailyJobTrigger") // Give the trigger a unique name
+                            .WithCronSchedule(time ?? "0 0 15 * * ?") // Cron expression for 15:00 every day
+                        );
+                    });
+
+                    // Add Quartz.NET hosted service
+                    services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+
+                    services.AddHostedService<Worker>();
 
 
-var host = builder.Build();
-host.Run();
+                });
+                
+                builder.ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    logging.AddSerilog();
+                });
+                var host = builder.Build();
+                host.Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Service corrupted");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
+        }
+    }
+}
+    
+
+

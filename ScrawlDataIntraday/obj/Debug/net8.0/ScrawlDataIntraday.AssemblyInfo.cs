@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ScrawlDataIntraday")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fee14a018a15f2b2f643cd77452dde9991f58887")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+35ad3a25b074370436465a01ce463e20ca31150d")]
 [assembly: System.Reflection.AssemblyProductAttribute("ScrawlDataIntraday")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ScrawlDataIntraday")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

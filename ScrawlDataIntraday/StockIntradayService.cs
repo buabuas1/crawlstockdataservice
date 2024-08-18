@@ -24,7 +24,7 @@ public class StockIntradayService
         }
         else
         {
-            throw new Exception("MongoDB is not connected");
+            throw new Exception("MongoDB is not connected" + bookStoreDatabaseSettings.Value.ConnectionString);
         }
         _booksCollection = mongoDatabase.GetCollection<StockIntraday>(
             bookStoreDatabaseSettings.Value.BooksCollectionName);

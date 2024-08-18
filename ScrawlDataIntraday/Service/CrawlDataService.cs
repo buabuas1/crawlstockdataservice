@@ -20,15 +20,19 @@ namespace ScrawlDataIntraday.Service
         private readonly ILogger<Worker> _logger;
         private readonly StockIntradayService _stockIntradayService;
         private readonly IBus _bus;
+        private readonly IConfiguration _configuration;
 
-        public CrawlDataService(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus)
+        public CrawlDataService(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus,
+            IConfiguration configuration)
         {
             _logger = logger;
             _stockIntradayService = stockIntradayService;
             _bus = bus;
+            _configuration = configuration;
         }
         public async Task Run(string stockCode)
         {
+            
             var retryPolicy = Policy
                         .Handle<Exception>()
                         .WaitAndRetryAsync(
@@ -49,6 +53,10 @@ namespace ScrawlDataIntraday.Service
 
             var ind = ConstStock.DefaultStocks.IndexOf(stockCode);
             _logger.LogInformation(string.Format("Done {0}, Processed: {1}%", stockCode, (Math.Round((double)ind / ConstStock.DefaultStocks.Count * 100))));
+            if (ind == ConstStock.DefaultStocks.Count - 1)
+            {
+                _logger.LogInformation("Done all");
+            }
         }
 
         private async Task SaveTradesToMongo(List<Trade>? trades)
@@ -146,7 +154,7 @@ namespace ScrawlDataIntraday.Service
                 {
                     //Console.WriteLine("Index " + index);
                     var text = e.Text;
-                    List<string> props = text.Split("\r\n").ToList();
+                    List<string> props = text.Split(Environment.NewLine).ToList();
 
                     var tradingTime = TimeOnly.Parse(props[0]);
                     DateTime dateTime = DateTime.Today.Add(tradingTime.ToTimeSpan());
