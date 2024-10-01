@@ -60,7 +60,6 @@ namespace ScrawlDataIntraday
 
                     services.AddHostedService<Worker>();
 
-
                 });
                 
                 builder.ConfigureLogging((hostingContext, logging) =>

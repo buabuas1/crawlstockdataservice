@@ -176,3 +176,6 @@ D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\bin\Debug\net8.0\run
 D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\obj\Debug\net8.0\ScrawlDataIntraday.csproj.CopyComplete
 D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\obj\Debug\net8.0\ScrawlDataIntraday.genruntimeconfig.cache
 D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\bin\Debug\net8.0\log\log20240719.json
+D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\bin\Debug\net8.0\log\log20240907.json
+D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\bin\Debug\net8.0\SeleniumExtras.WaitHelpers.dll
+D:\Code\csharpproject\ScrawlDataIntraday\ScrawlDataIntraday\bin\Debug\net8.0\log\log20241001.json

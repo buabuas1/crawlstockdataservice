@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "5xkxRANeXekp/nyhPYTYH1Yc4zOyapV7wWgZ5/Q1xGofVmFQMrp1GLR0t/1fZe7tSnUsa0SNmMwhQ/05uCln+w==",
+  "dgSpecHash": "JtVM9GsqzZScw0JH0jOgAJlItFtZuFQ0f5GVklrzINlztu4wrROG0d3pIEithNaCGfHMAPsdkPdmNUddUXjl1w==",
   "success": true,
   "projectFilePath": "D:\\Code\\csharpproject\\ScrawlDataIntraday\\ScrawlDataIntraday\\ScrawlDataIntraday.csproj",
   "expectedPackageFiles": [
@@ -53,6 +53,7 @@
     "C:\\Users\\Admin\\.nuget\\packages\\quartz.extensions.dependencyinjection\\3.10.0\\quartz.extensions.dependencyinjection.3.10.0.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\quartz.extensions.hosting\\3.10.0\\quartz.extensions.hosting.3.10.0.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\selenium.webdriver\\4.21.0\\selenium.webdriver.4.21.0.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\seleniumextras.waithelpers\\1.0.2\\seleniumextras.waithelpers.1.0.2.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\serilog\\4.0.0\\serilog.4.0.0.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\serilog.extensions.logging\\8.0.0\\serilog.extensions.logging.8.0.0.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\serilog.settings.configuration\\8.0.1\\serilog.settings.configuration.8.0.1.nupkg.sha512",

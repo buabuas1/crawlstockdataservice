@@ -12,6 +12,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MassTransit;
+using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
+using static System.Net.Mime.MediaTypeNames;
+using System.Xml.Linq;
 
 namespace ScrawlDataIntraday.Service
 {
@@ -40,7 +44,8 @@ namespace ScrawlDataIntraday.Service
                             sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(5),
                             onRetryAsync: async (exception, timespan, retryAttempt, context) =>
                             {
-                                Console.WriteLine($"Retry attempt {retryAttempt} after {timespan.TotalSeconds} seconds due to:      {exception.Message}");
+                                _logger.LogError($"Retry attempt {retryAttempt} after {timespan.TotalSeconds} seconds due to:      {exception.Message}");
+                                _logger.LogError(exception, "Exception when retry: ");
                                 _logger.LogError("Error Stock: " + context["stock"]);
                             });
             var rs = await retryPolicy.ExecuteAsync(async (ctx) =>
@@ -71,14 +76,164 @@ namespace ScrawlDataIntraday.Service
 
         private async Task<List<Trade>> GetStockIntraday(string stockCode)
         {
+            if (_configuration.GetSection("SourceCrawSite").Value == "Fireant")
+            {
+                return await GetStockIntradayUseFireant(stockCode);
+            }
+            return await GetStockIntradayUseStockBiz(stockCode);
+        }
+
+        private async Task<List<Trade>> GetStockIntradayUseFireant(string stockCode)
+        {
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             ChromeDriver driver = null;
 
             ChromeOptions options = new ChromeOptions();
             options.AddArgument("--headless"); // Run Chrome in headless mode
-                                               //options.AddArgument("--disable-gpu"); // Disable GPU hardware acceleration
-                                               //options.AddArgument("--window-size=1920,1080"); // Set window size if needed
+            options.AddArgument("--disable-gpu"); // Disable GPU hardware acceleration
+            options.AddArgument("--window-size=1920,1080"); // Set window size if needed
+            options.AddArgument("--no-sandbox"); // Bypass OS security model (use with caution)
+
+            // Initialize the ChromeDriver with options
+            driver = new ChromeDriver(options);
+
+            //var driver = new ChromeDriver();
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+
+            driver.Navigate().GoToUrl("https://fireant.vn/dashboard/content/symbols/" + stockCode);
+
+            IWebElement buttonDesau = driver.FindElement(By.CssSelector("body > div:nth-child(6) > div > div.bp5-dialog-container.bp5-overlay-content.bp5-overlay-appear-done.bp5-overlay-enter-done > div > div.bp5-dialog-footer > div > button:nth-child(1) > span"));
+
+            IWebElement iframe = driver.FindElement(By.CssSelector("body > div.bp5-portal > div > div.bp5-dialog-container.bp5-overlay-content.bp5-overlay-appear-done.bp5-overlay-enter-done > div > div.bp5-dialog-body > div > div.sc-fGdiLE.kWrsQW > div.sc-iUHWHT.hOtZdp.bp5-card.bp5-elevation-0 > div > div.sc-dZiGjT.gkdIit.bp5-callout.bp5-intent-none > div > div.sc-idnGQK.dUPKZ > div > button:nth-child(2) > span"));
+
+            //IList<IWebElement> elements = driver.FindElements(By.TagName("button"));
+
+            //foreach (IWebElement e in elements)
+            //{
+            //    if (e.Text == "Sổ lệnh")
+            //    {
+            //        iframe = e;
+            //        break;
+            //    }
+            //}
+
+            //var scrollOrigin = new WheelInputDevice.ScrollOrigin
+            //{
+            //    Element = iframe,
+            //    XOffset = 0,
+            //    YOffset = -50
+            //};
+            //new Actions(driver)
+            //    .ScrollFromOrigin(scrollOrigin, 0, 500)
+            //    .Perform();
+
+            new Actions(driver).Click(buttonDesau).Perform();
+
+            new Actions(driver)
+                .Click(iframe)
+                .Perform();
+
+            var listTrades = new List<Trade>();
+            int tradeCount = listTrades.Count;
+            for (int i = 0; i < 10000; i++)
+            {
+                try
+                {
+                    CrawlTradesFireant(driver, listTrades, stockCode);
+                    if (listTrades.Count > 0 && listTrades.Where(t => t.Side == "AT")?.Count() > 5)
+                    {
+                        throw new Exception("Craw false side");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Exception " + stockCode);
+                    driver.Close();
+                    driver.Quit();
+                    throw e;
+                }
+
+                if (tradeCount == listTrades.Count)
+                {
+                    break;
+                }
+                tradeCount = listTrades.Count;
+                if (tradeCount == 0)
+                {
+                    _logger.LogError("Error trades: " + stockCode);
+                }
+            }
+            _logger.LogInformation(stockCode + " Total trades: " + listTrades.Count);
+            stopwatch.Stop();
+            _logger.LogInformation(string.Format("Stock: {0}, Time elapsed: {1}", stockCode, stopwatch.Elapsed.TotalMinutes));
+            driver.Close();
+            driver.Quit();
+            return listTrades;
+        }
+
+        private static void CrawlTradesFireant(ChromeDriver driver, List<Trade> listTrades, string stockCode)
+        {
+
+            var divSoLenh = driver.FindElement(By.CssSelector("body > div.bp5-portal > div > div.bp5-dialog-container.bp5-overlay-content.bp5-overlay-appear-done.bp5-overlay-enter-done > div > div.bp5-dialog-body > div > div.sc-fGdiLE.kWrsQW > div.sc-iUHWHT.hOtZdp.bp5-card.bp5-elevation-0 > div > div.sc-dZiGjT.gkdIit.bp5-callout.bp5-intent-none > div > div.sc-fgSWkL.ivYmGK > div > div.sc-kdIgRK.bwZyVY > div > div > div:nth-child(1) > div"));
+
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            wait.Until(ExpectedConditions.ElementIsVisible(By.CssSelector("body > div.bp5-portal > div > div.bp5-dialog-container.bp5-overlay-content.bp5-overlay-appear-done.bp5-overlay-enter-done > div > div.bp5-dialog-body > div > div.sc-fGdiLE.kWrsQW > div.sc-iUHWHT.hOtZdp.bp5-card.bp5-elevation-0 > div > div.sc-dZiGjT.gkdIit.bp5-callout.bp5-intent-none > div > div.sc-fgSWkL.ivYmGK > div > div.sc-kdIgRK.bwZyVY > div > div > div:nth-child(1) > div")));
+
+            var childs = divSoLenh.FindElements(By.CssSelector(".list-row"));
+            var heightSize = childs.FirstOrDefault()?.Size.Height ?? 33;
+
+            for (int i = 0; i < childs.Count; i++)
+            {
+                var e = childs[i];
+                //Console.WriteLine($"Index {i.ToString()} {e.Text} ");
+                var top = 0;
+                int.TryParse(e.GetCssValue("top").Split("px")[0], out top);
+                var index = (int)Math.Round((decimal)(top / heightSize), 0);
+
+                if (index != null && (index) >= listTrades.Count)
+                {
+                    var text = ((IJavaScriptExecutor)driver).ExecuteScript("return arguments[0].innerText;", e);
+                    Console.WriteLine($"Index {i.ToString()} {text} ");
+                    
+                    var props = text.ToString().Split(Environment.NewLine).ToList();
+                    if (string.IsNullOrEmpty(props[0]) && string.IsNullOrEmpty(props[1])) { 
+                        continue; 
+                    }
+                    var tradingTime = TimeOnly.Parse(props[0]);
+                    DateTime dateTime = DateTime.Today.Add(tradingTime.ToTimeSpan());
+                    var price = decimal.Parse(props[1]);
+                    var change = decimal.Parse(props[2]);
+                    var volume = int.Parse(props[3], NumberStyles.AllowThousands, CultureInfo.InvariantCulture);
+
+                    var side = props.Count > 4 ? (props[4] == "B" ? "S" : "B") : "AT";
+                    var package = 1;
+                    listTrades.Add(new Trade(index.ToString(), dateTime, volume, price, side, stockCode, package));
+                    
+                }
+            }
+
+            var scrollOriginSL = new WheelInputDevice.ScrollOrigin
+            {
+                Element = divSoLenh,
+                XOffset = 0,
+                YOffset = -50
+            };
+            new Actions(driver)
+                .ScrollFromOrigin(scrollOriginSL, 0, 200)
+                .Perform();
+        }
+
+        private async Task<List<Trade>> GetStockIntradayUseStockBiz(string stockCode)
+        {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            ChromeDriver driver = null;
+
+            ChromeOptions options = new ChromeOptions();
+            options.AddArgument("--headless"); // Run Chrome in headless mode
+            options.AddArgument("--disable-gpu"); // Disable GPU hardware acceleration
+            options.AddArgument("--window-size=1920,1080"); // Set window size if needed
             options.AddArgument("--no-sandbox"); // Bypass OS security model (use with caution)
 
             // Initialize the ChromeDriver with options
@@ -121,7 +276,22 @@ namespace ScrawlDataIntraday.Service
             int tradeCount = listTrades.Count;
             for (int i = 0; i < 10000; i++)
             {
-                CrawlTrades(driver, listTrades, stockCode);
+                try
+                {
+                    CrawlTrades(driver, listTrades, stockCode);
+                    if (listTrades.Count > 0 && listTrades.Where(t => t.Side == "AT")?.Count() > 5)
+                    {
+                        throw new Exception("Craw false side");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Exception " + stockCode);
+                    driver.Close();
+                    driver.Quit();
+                    throw e;
+                }
+
                 if (tradeCount == listTrades.Count)
                 {
                     break;
@@ -136,13 +306,18 @@ namespace ScrawlDataIntraday.Service
             stopwatch.Stop();
             _logger.LogInformation(string.Format("Stock: {0}, Time elapsed: {1}", stockCode, stopwatch.Elapsed.TotalMinutes));
             driver.Close();
+            driver.Quit();
             return listTrades;
         }
 
         private static void CrawlTrades(ChromeDriver driver, List<Trade> listTrades, string stockCode)
         {
-            var divSoLenh = driver.FindElement(By.CssSelector("#__next > div.mx-auto.max-w-7xl.mt-4.px-4.lg\\:px-8 > div > main > div > div.grid.grid-cols-3.gap-4.w-full.max-xl\\:grid-cols-2.max-md\\:grid-cols-1.mt-4 > div:nth-child(1) > div:nth-child(2) > div.flex.flex-col.flex-1 > div.flex.flex-1.w-full > div > div.w-full.h-\\[250px\\] > div > div > div"));
 
+            var divSoLenh = driver.FindElement(By.CssSelector("#__next > div.mx-auto.max-w-7xl.mt-4.px-4.lg\\:px-8 > div > main > div > div.grid.grid-cols-3.gap-4.w-full.max-xl\\:grid-cols-2.max-md\\:grid-cols-1.mt-4 > div:nth-child(1) > div:nth-child(2) > div.flex.flex-col.flex-1 > div.flex.flex-1.w-full > div > div.w-full.h-\\[250px\\] > div > div > div"));
+            
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            wait.Until(ExpectedConditions.ElementIsVisible(By.CssSelector("#__next > div.mx-auto.max-w-7xl.mt-4.px-4.lg\\:px-8 > div > main > div > div.grid.grid-cols-3.gap-4.w-full.max-xl\\:grid-cols-2.max-md\\:grid-cols-1.mt-4 > div:nth-child(1) > div:nth-child(2) > div.flex.flex-col.flex-1 > div.flex.flex-1.w-full > div > div.w-full.h-\\[250px\\] > div > div > div")));
+            
             var childs = divSoLenh.FindElements(By.TagName("div"));
 
             foreach (IWebElement e in childs)
