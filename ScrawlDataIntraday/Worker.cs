@@ -21,11 +21,13 @@ namespace ScrawlDataIntraday
         private readonly ILogger<Worker> _logger;
         private readonly StockIntradayService _stockIntradayService;
         private readonly IBus _bus;
-        public Worker(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus)
+        private readonly IConfiguration _configuration;
+        public Worker(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus, IConfiguration configuration)
         {
             _logger = logger;
             _stockIntradayService = stockIntradayService;
             _bus = bus;
+            _configuration = configuration;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -58,7 +60,9 @@ namespace ScrawlDataIntraday
             }
             else
             {
-                foreach (var stock in ConstStock.DefaultStocks)
+                List<string> stocks = new List<string>();
+                stocks = _configuration.GetSection("Stocks").Get<List<string>>();
+                foreach (var stock in stocks)
                 {
                     await _bus.Publish(new StockMessage(stock));
                 }

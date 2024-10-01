@@ -25,6 +25,7 @@ namespace ScrawlDataIntraday.Service
         private readonly StockIntradayService _stockIntradayService;
         private readonly IBus _bus;
         private readonly IConfiguration _configuration;
+        private List<string> _errorStocks = new List<string>();
 
         public CrawlDataService(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus,
             IConfiguration configuration)
@@ -47,6 +48,10 @@ namespace ScrawlDataIntraday.Service
                                 _logger.LogError($"Retry attempt {retryAttempt} after {timespan.TotalSeconds} seconds due to:      {exception.Message}");
                                 _logger.LogError(exception, "Exception when retry: ");
                                 _logger.LogError("Error Stock: " + context["stock"]);
+                                if (retryAttempt == 3)
+                                {
+                                    _errorStocks.Add(stockCode);
+                                }
                             });
             var rs = await retryPolicy.ExecuteAsync(async (ctx) =>
             {
@@ -56,11 +61,14 @@ namespace ScrawlDataIntraday.Service
 
             await SaveTradesToMongo(rs);
 
-            var ind = ConstStock.DefaultStocks.IndexOf(stockCode);
-            _logger.LogInformation(string.Format("Done {0}, Processed: {1}%", stockCode, (Math.Round((double)ind / ConstStock.DefaultStocks.Count * 100))));
-            if (ind == ConstStock.DefaultStocks.Count - 1)
+            var allStock = _configuration.GetSection("Stocks").Get<List<string>>() ?? new List<string>();
+            var ind = allStock?.IndexOf(stockCode);
+           
+            _logger.LogInformation(string.Format("Done {0}, Processed: {1}%", stockCode, (Math.Round((double)ind / allStock.Count * 100))));
+            if (ind == allStock.Count - 1)
             {
                 _logger.LogInformation("Done all");
+                _logger.LogInformation("Error Stock: " + string.Join(",", _errorStocks));
             }
         }
 
@@ -194,7 +202,7 @@ namespace ScrawlDataIntraday.Service
                 if (index != null && (index) >= listTrades.Count)
                 {
                     var text = ((IJavaScriptExecutor)driver).ExecuteScript("return arguments[0].innerText;", e);
-                    Console.WriteLine($"Index {i.ToString()} {text} ");
+                    //Console.WriteLine($"Index {i.ToString()} {text} ");
                     
                     var props = text.ToString().Split(Environment.NewLine).ToList();
                     if (string.IsNullOrEmpty(props[0]) && string.IsNullOrEmpty(props[1])) { 
