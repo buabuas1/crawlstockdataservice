@@ -6,11 +6,12 @@
         public DateTime TradingTime { get; set; }
         public int Volume { get; set; }
         public decimal Price { get; set; }
+        public decimal Change { get; set; }
         public string Side { get; set; }
         public string Code { get; set; }
         public int Package { get; set; }
 
-        public Trade(string guid, DateTime tradingTime, int volume, decimal price, string side, string code, int package)
+        public Trade(string guid, DateTime tradingTime, int volume, decimal price, string side, string code, int package, decimal change)
         {
             Guid = guid;
             TradingTime = tradingTime;
@@ -19,6 +20,7 @@
             Side = side;
             Code = code;
             Package = package;
+            Change = change;
         }
     }
 }

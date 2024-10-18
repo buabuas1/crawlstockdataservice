@@ -14,6 +14,7 @@ using Polly;
 using Policy = Polly.Policy;
 using MassTransit;
 using Quartz;
+using ScrawlDataIntraday.Service;
 namespace ScrawlDataIntraday
 {
     public class Worker : BackgroundService, IJob
@@ -22,16 +23,19 @@ namespace ScrawlDataIntraday
         private readonly StockIntradayService _stockIntradayService;
         private readonly IBus _bus;
         private readonly IConfiguration _configuration;
-        public Worker(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus, IConfiguration configuration)
+        private readonly CrawlDataService _crawlDataService;
+        public Worker(ILogger<Worker> logger, StockIntradayService stockIntradayService, IBus bus, IConfiguration configuration, CrawlDataService crawlDataService)
         {
             _logger = logger;
             _stockIntradayService = stockIntradayService;
             _bus = bus;
             _configuration = configuration;
+            _crawlDataService = crawlDataService;
         }
 
         public async Task Execute(IJobExecutionContext context)
         {
+            _crawlDataService._errorStocks = new List<string>();
             await RunCrawlData();
         }
 
@@ -68,6 +72,22 @@ namespace ScrawlDataIntraday
                 }
             }
 
+            // retry
+            while (true)
+            {
+                var errStocks = _crawlDataService._errorStocks;
+                if (!_crawlDataService._isRunning && errStocks.Count > 0)
+                {
+                    _logger.LogInformation($"Running Retry: {string.Join(",", errStocks)}");
+                    
+                    _crawlDataService._isRunning = true;
+                    _crawlDataService._errorStocks = new List<string>();
+                    foreach (var stock in errStocks)
+                    {
+                        await _bus.Publish(new StockMessage(stock));
+                    }
+                }
+            }
         }
     }
 }
